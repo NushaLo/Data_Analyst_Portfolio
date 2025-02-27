@@ -66,10 +66,34 @@ LEFT JOIN donorsearch.user_anon_data AS uad ON uad.id = uab.user_id
 WHERE uab.date_of_use IS NOT NULL
 GROUP BY bonus_name
 ORDER BY AVG(uab.donation_count) desc;
-	
+
 -- Из данного запроса можно выделить три самые популярные бонусы, которые приводят и мягко мотивируют доноров:
 -- "-10% на кофе и еду", "Скидка 15% на цветы", "Подписка «Попкорн» на 60 дней от билайн тв".
 -- Соотношение донаций с использованными бонусами показывает нам, что многие идут на бонус, что не очень хорошо.
 -- Рекомендации:
 -- Создать программу лояльности, которая будет поощрять доноров за их долгосрочную вовлеченность и участие в разных проектах, а не за одноразовое пожертвование.
 -- Подключите доноров к реальным историям тех, кто получил помощь благодаря их пожертвованиям. Это может уменьшить фокус на материальных бонусах и усилить эмоциональную связь с процессом.
+
+--Эффективность бонусной системы по регионам
+WITH 
+bonus_stat AS (
+SELECT 
+	COUNT(DISTINCT user_id) AS count_unic_users,
+	region,
+	SUM(user_bonus_count) AS total_bonus,
+	SUM(donation_count) AS total_donation,
+	SUM(user_bonus_count) / COUNT(DISTINCT user_id) AS avg_bonus_per_donor,
+	SUM(donation_count) / COUNT(DISTINCT user_id) AS donation_per_bonus
+FROM donorsearch.user_anon_bonus uad 
+GROUP BY region
+)
+SELECT
+	region,
+	total_bonus,
+	total_donation,
+	avg_bonus_per_donor,
+	donation_per_bonus,
+	total_bonus / total_donation AS bonuses_per_donation,
+	RANK() OVER (ORDER BY donation_per_bonus DESC) AS rank_by_efficiency
+FROM bonus_stat
+ORDER BY donation_per_bonus DESC;
